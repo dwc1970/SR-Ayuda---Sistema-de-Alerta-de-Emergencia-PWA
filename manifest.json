@@ -1,0 +1,31 @@
+{
+  "name": "SR Ayuda",
+  "short_name": "Ayuda",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff4d4d",
+  "description": "Botón de pánico y envío de ubicación SOS.",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "Help.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+        "src": "Help.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+      {
+          "src": "https://unrivaled-vacherin-971505.netlify.app/Help.png",
+          "sizes": "512x512",
+          "type": "image/png"
+      }
+  ]
+}

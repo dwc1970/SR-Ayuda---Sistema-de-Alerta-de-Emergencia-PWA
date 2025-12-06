@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SR Ayuda</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff4d4d">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --blue-contact: #2962ff;
+            --blue-gradient: linear-gradient(135deg, #2962ff 0%, #0277bd 100%);
+            --green-contact: #00c853;
+            --green-gradient: linear-gradient(135deg, #00c853 0%, #00695c 100%);
+            --orange-voice: #ff6d00;
+            --orange-gradient: linear-gradient(135deg, #ff9100 0%, #ff6d00 100%);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body { background-color: var(--bg-color); height: 100vh; display: flex; justify-content: center; align-items: center; }
+
+        .app-container { width: 100%; height: 100%; max-width: 500px; background: #ffffff; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* REGISTRO */
+        #register-screen { padding: 40px 30px; display: flex; flex-direction: column; height: 100%; background: #fff; z-index: 10; overflow-y: auto; }
+        .reg-header { text-align: center; margin-bottom: 20px; }
+        .form-control { width: 100%; padding: 15px; border: 2px solid #e0e0e0; background: #fafafa; border-radius: 12px; font-weight: 600; margin-bottom: 10px; }
+        .btn-save { background: var(--blue-contact); color: white; border: none; padding: 18px; border-radius: 15px; font-size: 16px; font-weight: 700; margin-top: 20px; width: 100%; }
+
+        /* APP */
+        #app-screen { display: none; flex-direction: column; height: 100%; padding: 20px; background: #ffffff; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .app-logo { font-weight: 900; font-size: 22px; color: #333; }
+        .status-pill { background: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+        /* SOS */
+        .sos-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .sos-btn {
+            width: 190px; height: 190px; border-radius: 50%;
+            background: linear-gradient(145deg, #ff5252, #d50000);
+            box-shadow: 0 10px 40px rgba(213, 0, 0, 0.4);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: white; text-decoration: none; border: 6px solid #ffebee;
+        }
+        .sos-label { font-size: 50px; font-weight: 900; line-height: 1; }
+        .sos-sub { font-size: 14px; font-weight: 600; }
+
+        /* CONTACTOS */
+        .contacts-area { margin-top: auto; }
+        .contact-grid { display: flex; flex-direction: column; gap: 12px; }
+        .contact-row { display: flex; align-items: stretch; gap: 8px; }
+
+        /* Botón Ubicación (Grande) */
+        .contact-card-main {
+            flex: 2; padding: 12px; border-radius: 16px; text-align: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* Botón Voz (Naranja) */
+        .voice-btn {
+            flex: 1; background: var(--orange-gradient); border-radius: 16px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; cursor: pointer; border: none; box-shadow: 0 4px 10px rgba(255, 109, 0, 0.3);
+        }
+        .voice-btn:active { transform: scale(0.95); }
+
+        .c1-style { background: var(--blue-gradient); }
+        .c2-style { background: var(--green-gradient); }
+        .c-name { font-size: 15px; font-weight: 800; margin-bottom: 2px; }
+        .c-desc { font-size: 9px; font-weight: 600; opacity: 0.9; }
+        .v-icon { font-size: 24px; margin-bottom: 4px; }
+        .v-text { font-size: 9px; font-weight: 800; }
+
+        .reconfig { text-align: center; margin-top: 10px; }
+        .reconfig a { color: #ccc; text-decoration: none; font-size: 11px; }
+
+        /* OVERLAY CARGA */
+        #overlay-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98); z-index: 999;
+            display: none; justify-content: center; align-items: center; flex-direction: column; text-align: center; padding: 20px;
+        }
+        .spinner { border: 5px solid #f3f3f3; border-top: 5px solid #ff3b3b; border-radius: 50%; width: 50px; height: 50px; animation: spin 0.8s infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .mic-animation { font-size: 60px; color: var(--orange-voice); margin-bottom: 20px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+    <div id="overlay-loader">
+        <div id="loader-gps" style="display:none">
+            <div class="spinner"></div>
+            <h2 style="margin-top:20px; color:#333;">UBICANDO...</h2>
+        </div>
+        <div id="loader-mic" style="display:none">
+            <i class="fa-solid fa-microphone mic-animation"></i>
+            <h2 style="color:#333;">HABLA AHORA</h2>
+            <p style="color:#666;">Te estoy escuchando...</p>
+            <button onclick="stopDictation()" style="margin-top:30px; padding:15px 40px; background:#00c853; color:white; border:none; border-radius:50px; font-weight:bold; font-size:18px;">ENVIAR YA</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div id="register-screen">
+            <div class="reg-header">
+                <i class="fa-solid fa-user-shield" style="font-size: 40px; color: #2962ff;"></i>
+                <h2 style="margin-top:10px;">SR Ayuda</h2>
+                <p style="color:#888; font-size:14px;">Agrega tus contactos en casos de Urgencia</p>
+            </div>
+
+            <div style="background:#e3f2fd; padding:15px; border-radius:12px; margin-bottom:10px; border-left:5px solid #2962ff;">
+                <label style="font-size:12px; font-weight:bold; color:#1565c0;">CONTACTO AZUL</label>
+                <div style="display:flex; gap:5px;">
+                    <select id="c1Role" class="form-control" style="flex:1;"><option>Mamá</option><option>Papá</option><option>Pareja</option></select>
+                    <input type="tel" id="c1Tel" class="form-control" style="flex:1;" placeholder="Teléfono">
+                </div>
+            </div>
+
+            <div style="background:#e8f5e9; padding:15px; border-radius:12px; border-left:5px solid #00c853;">
+                <label style="font-size:12px; font-weight:bold; color:#2e7d32;">CONTACTO VERDE</label>
+                <div style="display:flex; gap:5px;">
+                    <select id="c2Role" class="form-control" style="flex:1;"><option>Amigo</option><option>Vecino</option></select>
+                    <input type="tel" id="c2Tel" class="form-control" style="flex:1;" placeholder="Teléfono">
+                </div>
+            </div>
+
+            <button class="btn-save" onclick="saveConfig()">GUARDAR</button>
+        </div>
+
+        <div id="app-screen">
+            <div class="header">
+                <div class="app-logo"><i class="fa-solid fa-heart-pulse" style="color:#ff3b3b;"></i> SR Ayuda</div>
+                <div class="status-pill">GPS LISTO</div>
+            </div>
+
+            <div class="sos-area">
+                <a href="tel:911" class="sos-btn">
+                    <span class="sos-label">SOS</span>
+                    <span class="sos-sub">LLAMAR 911</span>
+                </a>
+            </div>
+
+            <div class="contacts-area">
+                <div class="contact-grid">
+                    <div class="contact-row">
+                        <div class="contact-card-main c1-style" onclick="getLocationAndSend(1, false)">
+                            <i class="fa-solid fa-location-dot" style="font-size:26px; margin-bottom:5px;"></i>
+                            <span class="c-name" id="ui-c1-name">Contacto 1</span>
+                            <span class="c-desc">ENVIAR UBICACIÓN</span>
+                        </div>
+                        <div class="voice-btn" onclick="startDictation(1)">
+                            <i class="fa-solid fa-microphone-lines v-icon"></i>
+                            <span class="v-text">MENSAJE<br>VOZ</span>
+                        </div>
+                    </div>
+                    <div class="contact-row">
+                        <div class="contact-card-main c2-style" onclick="getLocationAndSend(2, false)">
+                            <i class="fa-solid fa-location-dot" style="font-size:26px; margin-bottom:5px;"></i>
+                            <span class="c-name" id="ui-c2-name">Contacto 2</span>
+                            <span class="c-desc">ENVIAR UBICACIÓN</span>
+                        </div>
+                        <div class="voice-btn" onclick="startDictation(2)">
+                            <i class="fa-solid fa-microphone-lines v-icon"></i>
+                            <span class="v-text">MENSAJE<br>VOZ</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="reconfig"><a href="#" onclick="resetConfig()">Configurar</a></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recognition = null;
+        let currentContact = 0;
+
+        // Configuración de Voz a Texto
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false; // Se detiene al dejar de hablar
+            recognition.lang = 'es-AR'; // Español Argentina
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                stopDictation(); 
+                getLocationAndSend(currentContact, text);
+            };
+            
+            // Si hay error o silencio, manda ubicación igual
+            recognition.onerror = function(event) { stopDictation(); getLocationAndSend(currentContact, null); };
+            recognition.onend = function() { stopDictation(); }; 
+        }
+
+        function saveConfig() {
+            const data = {
+                c1Name: document.getElementById('c1Role').value,
+                c1Tel: document.getElementById('c1Tel').value,
+                c2Name: document.getElementById('c2Role').value,
+                c2Tel: document.getElementById('c2Tel').value,
+            };
+            if(!data.c1Tel || !data.c2Tel) return alert("Faltan teléfonos");
+            localStorage.setItem('srAyudaFinal', JSON.stringify(data)); 
+            loadApp();
+        }
+
+        function loadApp() {
+            const data = JSON.parse(localStorage.getItem('srAyudaFinal'));
+            if(!data) {
+                document.getElementById('register-screen').style.display = 'flex';
+                document.getElementById('app-screen').style.display = 'none';
+            } else {
+                document.getElementById('register-screen').style.display = 'none';
+                document.getElementById('app-screen').style.display = 'flex';
+                document.getElementById('ui-c1-name').innerText = data.c1Name;
+                document.getElementById('ui-c2-name').innerText = data.c2Name;
+            }
+        }
+
+        function startDictation(idx) {
+            currentContact = idx;
+            if(recognition) {
+                document.getElementById('overlay-loader').style.display = 'flex';
+                document.getElementById('loader-mic').style.display = 'flex';
+                document.getElementById('loader-gps').style.display = 'none';
+                recognition.start();
+            } else {
+                getLocationAndSend(idx, null); // Si no soporta voz, manda SMS normal directo
+            }
+        }
+
+        function stopDictation() {
+            if(recognition) recognition.stop();
+            document.getElementById('overlay-loader').style.display = 'none';
+        }
+
+        function getLocationAndSend(idx, voiceText) {
+            // Mostrar "Ubicando..." solo si no venimos de hablar
+            if(voiceText === false) {
+                document.getElementById('overlay-loader').style.display = 'flex';
+                document.getElementById('loader-mic').style.display = 'none';
+                document.getElementById('loader-gps').style.display = 'flex';
+            }
+
+            // Intenta obtener GPS con tiempo límite de 4 seg para no demorar
+            if (!navigator.geolocation) { prepareSMS(idx, null, voiceText); return; }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const link = `http://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                    prepareSMS(idx, link, voiceText);
+                },
+                (err) => { prepareSMS(idx, null, voiceText); }, // Si falla GPS, envía igual
+                { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
+            );
+        }
+
+        function prepareSMS(idx, mapLink, voiceText) {
+            document.getElementById('overlay-loader').style.display = 'none';
+            const data = JSON.parse(localStorage.getItem('srAyudaFinal'));
+            const phone = idx === 1 ? data.c1Tel : data.c2Tel;
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            let msg = `SOS [${time}]. `;
+            
+            // Si hay texto de voz, lo pone en mayúsculas
+            if (voiceText && typeof voiceText === 'string') {
+                msg += `MENSAJE: "${voiceText.toUpperCase()}". `;
+            } else {
+                msg += `NECESITO AYUDA URGENTE. `;
+            }
+
+            if (mapLink) msg += `Ubicación: ${mapLink}`;
+            else msg += `(Sin señal GPS)`;
+
+            // ESTA ES LA LÍNEA QUE ABRE LA APP DE MENSAJES AUTOMÁTICAMENTE
+            window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+        }
+
+        function resetConfig() {
+            if(confirm("¿Borrar todo?")) {
+                localStorage.removeItem('srAyudaFinal');
+                location.reload();
+            }
+        }
+
+        loadApp();
+    </script>
+</body>
+</html>
