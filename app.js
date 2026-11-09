@@ -29,7 +29,17 @@ const SAMPLE_PROFILE = {
     auxTel: '+5492604555444'
 };
 
-window.onload = function() {
+// Función blindada para retirar el Splash Screen sin bloqueos
+function hideSplashScreen() {
+    const splash = document.getElementById('splash-screen');
+    if (splash && !splash.classList.contains('fade-out')) {
+        splash.classList.add('fade-out');
+        setTimeout(() => splash.remove(), 500);
+    }
+}
+
+// Inicialización segura con DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
     loadFromStorage();
     if (profiles.length === 0) {
         profiles.push(SAMPLE_PROFILE);
@@ -40,15 +50,12 @@ window.onload = function() {
     updateSelectOptions();
     renderEmergencyView(currentProfileId);
 
-    // Animación Splash Screen: 1s visible + 0.5s fade out
-    setTimeout(() => {
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-            splash.classList.add('fade-out');
-            setTimeout(() => splash.remove(), 500);
-        }
-    }, 1000);
-};
+    // Oculta el logo tras 1 segundo exacto
+    setTimeout(hideSplashScreen, 1000);
+});
+
+// Respaldo de seguridad: fuerza el cierre a los 1.5s sí o sí
+setTimeout(hideSplashScreen, 1500);
 
 // Almacenamiento Local
 function loadFromStorage() {
@@ -161,9 +168,9 @@ function clearForm() {
     document.getElementById('data-portador').value = '';
     document.getElementById('data-mama').value = '';
     document.getElementById('data-papa').value = '';
-    document.getElementById('preview-portador').src = DEFAULT_AVATARS.portador;
-    document.getElementById('preview-mama').src = DEFAULT_AVATARS.mama;
-    document.getElementById('preview-papa').src = DEFAULT_AVATARS.papa;
+    document.getElementById('preview-portador').src = '';
+    document.getElementById('preview-mama').src = '';
+    document.getElementById('preview-papa').src = '';
     document.getElementById('form-header-title').textContent = '✍️ Registrar Perfil de Usuario';
 }
 
@@ -237,6 +244,7 @@ function editProfile(id) {
 // Renderizado de Lista de Perfiles
 function renderProfilesList() {
     const container = document.getElementById('profiles-container');
+    if (!container) return;
     container.innerHTML = '';
 
     if (profiles.length === 0) {
