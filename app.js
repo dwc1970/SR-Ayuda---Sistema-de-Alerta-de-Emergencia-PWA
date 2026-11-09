@@ -45,10 +45,30 @@ document.addEventListener('DOMContentLoaded', () => {
         profiles.push(SAMPLE_PROFILE);
         saveToStorage();
     }
-    currentProfileId = profiles[0].id;
+    
+    // Detectar si la página fue abierta escaneando un QR con parámetro ?id=
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedId = urlParams.get('id');
+
+    if (sharedId) {
+        const found = profiles.find(p => p.id === sharedId);
+        if (found) {
+            currentProfileId = found.id;
+        } else {
+            currentProfileId = profiles[0].id;
+        }
+    } else {
+        currentProfileId = profiles[0].id;
+    }
+
     renderProfilesList();
     updateSelectOptions();
     renderEmergencyView(currentProfileId);
+
+    // Si viene de un escaneo QR de la cámara, ir directo al visor móvil
+    if (sharedId) {
+        switchTab('preview');
+    }
 
     // Oculta el logo tras 1 segundo exacto
     setTimeout(hideSplashScreen, 1000);
@@ -402,7 +422,7 @@ function renderEmergencyView(id) {
     generateQR(p);
 }
 
-// Generar Código QR
+// Generar Código QR codificando la URL web pública del perfil
 function generateQR(profile) {
     const qrCanvas = document.getElementById('qrcode-canvas');
     const printQr = document.getElementById('print-qr');
@@ -412,7 +432,9 @@ function generateQR(profile) {
     qrCanvas.innerHTML = '';
     printQr.innerHTML = '';
 
-    const qrPayload = `BRAZALETE DE AUXILIO:\nNombre: ${profile.nombre} ${profile.apellido}\nCondicion: ${profile.discapacidad}\nMama: ${profile.mamaTel}\nPapa: ${profile.papaTel}\nAuxilio: ${profile.auxTel}`;
+    // Generar enlace público dinámico hacia la app con el parámetro id
+    const baseUrl = window.location.origin + window.location.pathname;
+    const qrPayload = `${baseUrl}?id=${profile.id}`;
 
     new QRCode(qrCanvas, {
         text: qrPayload,
