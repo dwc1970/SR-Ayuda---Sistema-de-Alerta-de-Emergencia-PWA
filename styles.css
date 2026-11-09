@@ -31,7 +31,69 @@ body {
     flex-direction: column;
 }
 
-/* HEADER & NAVEGACIÓN */
+/* SPLASH SCREEN / PANTALLA DE CARGA INICIAL */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0f172a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+}
+
+.splash-content {
+    text-align: center;
+    color: white;
+    animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.splash-icon {
+    font-size: 3.5rem;
+    background-color: var(--primary);
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem auto;
+    box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.5);
+}
+
+.splash-content h1 {
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+
+.splash-content h1 span {
+    color: #ef4444;
+}
+
+.splash-content p {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-top: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+@keyframes scaleIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.fade-out {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* HEADER Y NAVEGACIÓN */
 header {
     background-color: #0f172a;
     color: #ffffff;
@@ -137,7 +199,7 @@ main {
     display: block;
 }
 
-/* VISTA PREVIA SCANNER / CELULAR */
+/* SIMULADOR MÓVIL */
 .simulator-layout {
     display: flex;
     gap: 2rem;
@@ -174,7 +236,7 @@ main {
     padding-bottom: 1.5rem;
 }
 
-/* TARJETA DE AUXILIO MÓVIL */
+/* TARJETA DE AUXILIO */
 .emergency-header {
     background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
     color: white;
@@ -264,7 +326,6 @@ main {
     margin-top: 0.2rem;
 }
 
-/* SECCIÓN CONDICIÓN / ALERTA */
 .disability-box {
     background-color: #fffbeb;
     border: 2px solid #fde68a;
@@ -295,7 +356,6 @@ main {
     margin-top: 0.15rem;
 }
 
-/* TARJETAS DE CONTACTOS DE EMERGENCIA EN MÓVIL */
 .contacts-stack {
     padding: 0 1rem;
     display: flex;
@@ -408,7 +468,7 @@ main {
     margin-top: 0.1rem;
 }
 
-/* SIDEBAR DE OPCIONES Y QR */
+/* SIDEBAR Y TARJETAS */
 .controls-panel {
     flex: 1;
     min-width: 300px;
@@ -485,7 +545,7 @@ main {
     background-color: var(--primary-dark);
 }
 
-/* FORMULARIO DE REGISTRO */
+/* FORMULARIO */
 .form-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -557,7 +617,7 @@ main {
     background: #e2e8f0;
 }
 
-/* VISTA LISTA DE PERFILES */
+/* LISTA DE PERFILES */
 .profiles-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -610,35 +670,17 @@ main {
 .btn-edit { background-color: #f1f5f9; color: #334155; }
 .btn-delete { background-color: #fee2e2; color: #dc2626; }
 
-/* VISTA IMPRESIÓN */
+/* MEDIOS IMPRESOS */
 @media print {
-    header, nav, .controls-panel, .no-print {
+    header, nav, .controls-panel, .no-print, #splash-screen {
         display: none !important;
     }
-    body {
-        background: white;
-    }
-    main {
-        max-width: 100%;
-        padding: 0;
-    }
-    .phone-frame {
-        border: none;
-        box-shadow: none;
-        max-width: 100%;
-    }
-    .phone-notch { display: none; }
+    body { background: white; }
+    main { max-width: 100%; padding: 0; }
     .print-card-wrapper {
         display: block !important;
         page-break-inside: avoid;
+        text-align: center;
+        padding: 2rem;
     }
-}
-
-.print-layout {
-    display: none;
-    background: white;
-    padding: 2rem;
-    border-radius: 16px;
-    border: 2px dashed #cbd5e1;
-    text-align: center;
 }

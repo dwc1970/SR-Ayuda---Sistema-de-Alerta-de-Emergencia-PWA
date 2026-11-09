@@ -10,9 +10,19 @@
 </head>
 <body>
 
+    <!-- PANTALLA DE CARGA / SPLASH SCREEN INICIAL -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="splash-icon">🚨</div>
+            <h1>Brazalete<span>Auxilio</span></h1>
+            <p>Sistema de Alerta de Emergencia</p>
+        </div>
+    </div>
+
+    <!-- NAVEGACIÓN SUPERIOR -->
     <header>
         <div class="header-container">
-            <div class="brand" onclick="switchView('perfil')">
+            <div class="brand" onclick="switchTab('list')">
                 <div class="brand-icon">🚨</div>
                 <div class="brand-text">
                     <h1>Brazalete<span>Auxilio</span></h1>
@@ -20,157 +30,161 @@
                 </div>
             </div>
             <nav>
-                <button class="nav-btn active" onclick="switchView('perfil')">Perfiles</button>
-                <button class="nav-btn" onclick="switchView('nuevo')">+ Nuevo Perfil</button>
-                <button class="nav-btn" onclick="switchView('qr')">Vista QR / Móvil</button>
+                <button id="btn-tab-list" class="nav-btn active" onclick="switchTab('list')">📁 Perfiles</button>
+                <button id="btn-tab-register" class="nav-btn" onclick="switchTab('register')">➕ Nuevo Perfil</button>
+                <button id="btn-tab-preview" class="nav-btn" onclick="switchTab('preview')">📱 Vista Celular / QR</button>
             </nav>
         </div>
     </header>
 
     <main>
-        <!-- VISTA DE PERFILES GUARDADOS -->
-        <section id="view-perfil" class="view-section active">
+        <!-- VISTA 1: LISTA DE PERFILES -->
+        <section id="view-list" class="view-section active">
             <div class="card">
                 <div class="card-title">Perfiles de Emergencia Registrados</div>
-                <p class="card-desc">Seleccioná un perfil para ver su tarjeta de emergencia interactiva o generar su código QR impresible.</p>
-                <div id="profiles-container" class="profiles-grid">
-                    <!-- Los perfiles se cargan dinámicamente desde app.js -->
-                </div>
+                <p class="card-desc">Selecciona un perfil para ver su tarjeta interactiva o editar sus datos de contacto de emergencia.</p>
+                <div id="profiles-container" class="profiles-grid"></div>
             </div>
         </section>
 
-        <!-- VISTA FORMULARIO (NUEVO / EDITAR) -->
-        <section id="view-nuevo" class="view-section">
+        <!-- VISTA 2: FORMULARIO REGISTRAR / EDITAR -->
+        <section id="view-register" class="view-section">
             <div class="card">
-                <div class="card-title" id="form-title">Registrar Nuevo Perfil de Emergencia</div>
-                <p class="card-desc">Completa los datos del portador y los contactos de emergencia protegidos por PIN.</p>
+                <div class="card-title" id="form-header-title">✍️ Registrar Perfil de Usuario</div>
+                <p class="card-desc">Completa la información del portador y los contactos primarios protegidos por un PIN de 4 dígitos.</p>
                 
-                <form id="emergency-form" onsubmit="saveProfile(event)">
-                    <input type="hidden" id="profile-id">
-                    
+                <form id="profile-form" onsubmit="handleFormSubmit(event)">
+                    <input type="hidden" id="field-id">
+                    <input type="hidden" id="data-portador">
+                    <input type="hidden" id="data-mama">
+                    <input type="hidden" id="data-papa">
+
                     <div class="form-grid">
-                        <div class="form-section-title span-2">1. Datos del Portador</div>
-                        
+                        <div class="form-section-title span-2">1. DATOS DEL PORTADOR</div>
+
                         <div class="form-group">
                             <label>Nombre(s) *</label>
-                            <input type="text" id="nombre" required placeholder="Ej: Mateo">
+                            <input type="text" id="field-nombre" required placeholder="Ej: Mateo">
                         </div>
-                        
+
                         <div class="form-group">
                             <label>Apellido(s) *</label>
-                            <input type="text" id="apellido" required placeholder="Ej: González">
+                            <input type="text" id="field-apellido" required placeholder="Ej: González">
                         </div>
 
                         <div class="form-group">
                             <label>Edad *</label>
-                            <input type="number" id="edad" required placeholder="Ej: 7">
+                            <input type="number" id="field-edad" required placeholder="Ej: 7">
                         </div>
 
                         <div class="form-group">
-                            <label>Condición / Diagnóstico Principal *</label>
-                            <input type="text" id="condicion" required placeholder="Ej: Autismo (TEA), Alzheimer, Alergias">
+                            <label>Condición / Diagnóstico *</label>
+                            <input type="text" id="field-discapacidad" required placeholder="Ej: Autismo (TEA), Alzheimer, Alergias">
                         </div>
 
                         <div class="form-group span-2">
                             <label>Dirección de Residencia *</label>
-                            <input type="text" id="direccion" required placeholder="Ej: Av. San Martín 1234, Ciudad">
+                            <input type="text" id="field-direccion" required placeholder="Ej: Calle Principal 456, San Rafael">
                         </div>
 
                         <div class="form-group span-2">
-                            <label>Foto 1: "Este soy yo" (Portador) *</label>
+                            <label>Foto: "Este soy yo" (Portador) *</label>
                             <div class="image-uploader">
-                                <img id="preview-foto" src="" alt="Vista previa">
-                                <input type="file" id="foto-portador" accept="image/*" onchange="previewImage(event, 'preview-foto')">
+                                <img id="preview-portador" src="" alt="Vista Previa">
+                                <input type="file" accept="image/*" onchange="uploadImage(event, 'preview-portador', 'data-portador')">
                             </div>
                         </div>
 
-                        <div class="form-section-title span-2">2. Contacto Principal: Mamá / Tutor 1</div>
+                        <div class="form-section-title span-2">2. CONTACTO PRINCIPAL: MAMÁ / TUTOR 1</div>
 
                         <div class="form-group">
-                            <label>Nombre y Apellido *</label>
-                            <input type="text" id="mama-nombre" required placeholder="Ej: María Pérez">
+                            <label>Nombre y Apellido de Mamá *</label>
+                            <input type="text" id="field-mama-nombre" required placeholder="Ej: Laura Pérez">
                         </div>
 
                         <div class="form-group">
-                            <label>Teléfono (con característica) *</label>
-                            <input type="tel" id="mama-tel" required placeholder="Ej: +5492604123456">
+                            <label>Teléfono de Mamá *</label>
+                            <input type="tel" id="field-mama-tel" required placeholder="Ej: +5492604123456">
                         </div>
 
                         <div class="form-group span-2">
-                            <label>Foto de Mamá / Tutor 1</label>
+                            <label>Foto de Mamá</label>
                             <div class="image-uploader">
-                                <img id="preview-mama" src="" alt="Vista previa">
-                                <input type="file" id="foto-mama" accept="image/*" onchange="previewImage(event, 'preview-mama')">
+                                <img id="preview-mama" src="" alt="Vista Previa">
+                                <input type="file" accept="image/*" onchange="uploadImage(event, 'preview-mama', 'data-mama')">
                             </div>
                         </div>
 
-                        <div class="form-section-title span-2">3. Contacto Opcional: Papá / Tutor 2</div>
+                        <div class="form-section-title span-2">3. CONTACTO PRINCIPAL: PAPÁ / TUTOR 2</div>
 
                         <div class="form-group">
-                            <label>Nombre y Apellido</label>
-                            <input type="text" id="papa-nombre" placeholder="Ej: Carlos González">
+                            <label>Nombre y Apellido de Papá</label>
+                            <input type="text" id="field-papa-nombre" placeholder="Ej: Carlos González">
                         </div>
 
                         <div class="form-group">
-                            <label>Teléfono</label>
-                            <input type="tel" id="papa-tel" placeholder="Ej: +5492604654321">
+                            <label>Teléfono de Papá</label>
+                            <input type="tel" id="field-papa-tel" placeholder="Ej: +5492604654321">
                         </div>
 
                         <div class="form-group span-2">
-                            <label>Foto de Papá / Tutor 2</label>
+                            <label>Foto de Papá</label>
                             <div class="image-uploader">
-                                <img id="preview-papa" src="" alt="Vista previa">
-                                <input type="file" id="foto-papa" accept="image/*" onchange="previewImage(event, 'preview-papa')">
+                                <img id="preview-papa" src="" alt="Vista Previa">
+                                <input type="file" accept="image/*" onchange="uploadImage(event, 'preview-papa', 'data-papa')">
                             </div>
                         </div>
 
-                        <div class="form-section-title span-2">4. Contacto de Auxilio / Alternativo</div>
+                        <div class="form-section-title span-2">4. CONTACTO DE AUXILIO ALTERNATIVO</div>
 
                         <div class="form-group">
-                            <label>Nombre y Vínculo (Ej: Tío Juan)</label>
-                            <input type="text" id="aux-nombre" placeholder="Ej: Juan Pérez (Tío)">
+                            <label>Nombre y Vínculo de Auxilio</label>
+                            <input type="text" id="field-aux-nombre" placeholder="Ej: Roberto González (Abuelo)">
                         </div>
 
                         <div class="form-group">
                             <label>Teléfono de Auxilio</label>
-                            <input type="tel" id="aux-tel" placeholder="Ej: +5492604998877">
+                            <input type="tel" id="field-aux-tel" placeholder="Ej: +5492604555444">
                         </div>
 
-                        <div class="form-section-title span-2">5. Seguridad del Perfil (PIN de 4 dígitos)</div>
-                        
+                        <div class="form-section-title span-2">5. PIN DE SEGURIDAD (4 DÍGITOS)</div>
+
                         <div class="form-group span-2">
-                            <label>PIN numérico (necesario para editar o borrar este perfil) *</label>
-                            <input type="password" id="pin-seguridad" maxlength="4" pattern="\d{4}" required placeholder="Ej: 1234">
+                            <label>PIN de 4 dígitos (requerido para editar o borrar el perfil) *</label>
+                            <input type="password" id="field-pin" maxlength="4" pattern="\d{4}" required placeholder="Ej: 1234">
                         </div>
 
                         <div class="span-2" style="display: flex; gap: 1rem; margin-top: 1rem;">
                             <button type="submit" class="btn-action btn-primary" style="flex: 2;">Guardar Perfil</button>
-                            <button type="button" class="btn-action" style="background: #64748b; flex: 1;" onclick="switchView('perfil')">Cancelar</button>
+                            <button type="button" class="btn-action" style="background: #64748b; flex: 1;" onclick="clearForm(); switchTab('list');">Cancelar</button>
                         </div>
                     </div>
                 </form>
             </div>
         </section>
 
-        <!-- VISTA QR Y SIMULADOR MÓVIL -->
-        <section id="view-qr" class="view-section">
+        <!-- VISTA 3: SIMULADOR MÓVIL Y CÓDIGO QR -->
+        <section id="view-preview" class="view-section">
+            <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; background: white; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+                <label style="font-weight: 700; font-size: 0.85rem;">Seleccionar Perfil Activo:</label>
+                <select id="select-active-profile" onchange="changeActiveProfile(this.value)" style="padding: 0.4rem; border-radius: 8px; border: 1px solid #cbd5e1; flex: 1; font-weight: 600;"></select>
+            </div>
+
             <div class="simulator-layout">
-                <!-- Simulador de Celular -->
+                <!-- MARCO DE CELULAR -->
                 <div class="phone-frame">
                     <div class="phone-notch"></div>
-                    <div class="phone-screen" id="mobile-card-preview">
-                        <!-- Aquí se renderiza la tarjeta dinámica de emergencia -->
-                    </div>
+                    <div class="phone-screen" id="emergency-mobile-view"></div>
                 </div>
 
-                <!-- Panel de Controles y QR -->
+                <!-- PANEL CONTROLES Y QR -->
                 <div class="controls-panel">
                     <div class="card">
                         <div class="card-title">Código QR del Brazalete</div>
-                        <p class="card-desc">Escanea este código con cualquier cámara para abrir directamente la tarjeta de emergencia en dispositivos móviles.</p>
+                        <p class="card-desc">Escanea este código para desplegar la tarjeta de auxilio en cualquier smartphone.</p>
                         <div class="qr-display">
                             <div id="qrcode-canvas"></div>
-                            <button class="btn-action" onclick="printCard()">🖨️ Imprimir Tarjeta / Brazalete</button>
+                            <button class="btn-action" onclick="window.print()">🖨️ Imprimir Tarjeta / Brazalete</button>
                         </div>
                     </div>
                 </div>
@@ -178,7 +192,14 @@
         </section>
     </main>
 
-    <!-- Librería QR -->
+    <!-- ELEMENTO IMPRESIÓN OCULTO -->
+    <div class="print-layout print-card-wrapper" style="display:none;">
+        <h2 id="print-name"></h2>
+        <p id="print-condition"></p>
+        <div id="print-qr" style="display: flex; justify-content: center; margin-top: 1rem;"></div>
+    </div>
+
+    <!-- LIBRERÍAS Y LÓGICA -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="app.js"></script>
 </body>

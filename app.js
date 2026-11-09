@@ -9,7 +9,7 @@ const DEFAULT_AVATARS = {
     papa: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='%232563eb'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-.85-5.05-2.2.03-1.66 3.33-2.57 5.05-2.57s5.02.91 5.05 2.57C15.8 19.15 14.03 20 12 20z'/></svg>"
 };
 
-// Perfil inicial de demostración
+// Perfil de demostración inicial
 const SAMPLE_PROFILE = {
     id: 'sample-01',
     pin: '1234',
@@ -39,6 +39,15 @@ window.onload = function() {
     renderProfilesList();
     updateSelectOptions();
     renderEmergencyView(currentProfileId);
+
+    // Animación Splash Screen: 1s visible + 0.5s fade out
+    setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.classList.add('fade-out');
+            setTimeout(() => splash.remove(), 500);
+        }
+    }, 1000);
 };
 
 // Almacenamiento Local
@@ -64,8 +73,11 @@ function switchTab(tabId) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
 
-    document.getElementById(`view-${tabId}`).classList.add('active');
-    document.getElementById(`btn-tab-${tabId}`).classList.add('active');
+    const section = document.getElementById(`view-${tabId}`);
+    const btn = document.getElementById(`btn-tab-${tabId}`);
+
+    if (section) section.classList.add('active');
+    if (btn) btn.classList.add('active');
 
     if (tabId === 'list') {
         renderProfilesList();
@@ -160,7 +172,7 @@ function requestPinAndEdit(id) {
     if (!p) return;
 
     const enteredPin = prompt(`Ingrese el PIN de 4 dígitos para editar el perfil de ${p.nombre}:`);
-    if (enteredPin === null) return; // Cancelado
+    if (enteredPin === null) return;
 
     if (enteredPin !== p.pin) {
         alert("PIN incorrecto. Acceso denegado.");
@@ -175,7 +187,7 @@ function requestPinAndDelete(id) {
     if (!p) return;
 
     const enteredPin = prompt(`Ingrese el PIN de 4 dígitos para ELIMINAR el perfil de ${p.nombre}:`);
-    if (enteredPin === null) return; // Cancelado
+    if (enteredPin === null) return;
 
     if (enteredPin !== p.pin) {
         alert("PIN incorrecto. No se pudo eliminar el perfil.");
@@ -265,6 +277,7 @@ function viewProfile(id) {
 
 function updateSelectOptions() {
     const select = document.getElementById('select-active-profile');
+    if (!select) return;
     select.innerHTML = '';
     profiles.forEach(p => {
         const opt = document.createElement('option');
@@ -287,20 +300,20 @@ function renderEmergencyView(id) {
     const p = profiles.find(item => item.id === id);
     const screen = document.getElementById('emergency-mobile-view');
 
+    if (!screen) return;
+
     if (!p) {
         screen.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Selecciona un perfil válido.</div>`;
         return;
     }
 
     screen.innerHTML = `
-        <!-- ENCABEZADO DE EMERGENCIA -->
         <div class="emergency-header">
             <span class="emergency-badge">✚ PERFIL DE AUXILIO ID</span>
             <h2>¡NECESITO AYUDA!</h2>
             <p>Por favor contacta a mi familia de inmediato.</p>
         </div>
 
-        <!-- FOTO "ESTE SOY YO" Y DATOS DEL PORTADOR -->
         <div class="profile-hero">
             <div class="avatar-container">
                 <img src="${p.fotoPortador}" class="avatar-img" onerror="this.src='${DEFAULT_AVATARS.portador}'">
@@ -310,7 +323,6 @@ function renderEmergencyView(id) {
             <p class="profile-age">${p.edad} AÑOS</p>
         </div>
 
-        <!-- CONDICIÓN O DISCAPACIDAD -->
         <div class="disability-box">
             <div class="disability-icon">⚠️</div>
             <div>
@@ -319,9 +331,7 @@ function renderEmergencyView(id) {
             </div>
         </div>
 
-        <!-- BOTONES DE CONTACTO DIRECTO DE LA FAMILIA -->
         <div class="contacts-stack">
-            <!-- MAMÁ -->
             <div class="contact-card mama-card">
                 <div class="contact-header">
                     <img src="${p.fotoMama}" class="contact-avatar" onerror="this.src='${DEFAULT_AVATARS.mama}'">
@@ -334,7 +344,6 @@ function renderEmergencyView(id) {
                 <a href="tel:${p.mamaTel}" class="btn-call btn-mama">📞 LLAMAR A MAMÁ</a>
             </div>
 
-            <!-- PAPÁ -->
             <div class="contact-card papa-card">
                 <div class="contact-header">
                     <img src="${p.fotoPapa}" class="contact-avatar" onerror="this.src='${DEFAULT_AVATARS.papa}'">
@@ -347,7 +356,6 @@ function renderEmergencyView(id) {
                 <a href="tel:${p.papaTel}" class="btn-call btn-papa">📞 LLAMAR A PAPÁ</a>
             </div>
 
-            <!-- AUXILIO -->
             <div class="contact-card aux-card">
                 <div style="font-size: 0.65rem; font-weight: 800; color: #92400e; text-align: center; margin-bottom: 0.4rem; text-transform: uppercase;">
                     Contacto familiar secundario:
@@ -360,13 +368,11 @@ function renderEmergencyView(id) {
             </div>
         </div>
 
-        <!-- DIRECCIÓN DE HOGAR -->
         <div class="address-box">
             <label>🏠 Dirección de Residencia</label>
             <p>${p.direccion}</p>
         </div>
 
-        <!-- TELÉFONOS DE SERVICIOS PÚBLICOS DE EMERGENCIA -->
         <div style="margin: 1.25rem 1rem 0 1rem; padding-top: 1rem; border-top: 2px dashed #cbd5e1;">
             <div style="font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; text-align: center; margin-bottom: 0.75rem;">
                 🚨 Teléfonos Directos de Emergencia Pública
@@ -392,6 +398,9 @@ function renderEmergencyView(id) {
 function generateQR(profile) {
     const qrCanvas = document.getElementById('qrcode-canvas');
     const printQr = document.getElementById('print-qr');
+
+    if (!qrCanvas || !printQr) return;
+
     qrCanvas.innerHTML = '';
     printQr.innerHTML = '';
 
@@ -415,6 +424,8 @@ function generateQR(profile) {
         correctLevel: QRCode.CorrectLevel.H
     });
 
-    document.getElementById('print-name').textContent = `Brazalete de Auxilio: ${profile.nombre} ${profile.apellido}`;
-    document.getElementById('print-condition').textContent = `Condición: ${profile.discapacidad}`;
+    const printName = document.getElementById('print-name');
+    const printCond = document.getElementById('print-condition');
+    if (printName) printName.textContent = `Brazalete de Auxilio: ${profile.nombre} ${profile.apellido}`;
+    if (printCond) printCond.textContent = `Condición: ${profile.discapacidad}`;
 }
