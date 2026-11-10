@@ -1,18 +1,22 @@
+// CONFIGURACIÓN DE SUPABASE
+const SUPABASE_URL = 'https://mpezhcqiwjbbmnpksyou.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_nspbW2ThzB7pVDmBkVKrOw_j7K8n_u1w9Y'; // Tu clave publicable real
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const STORAGE_KEY = 'brazaletes_auxilio_data_v1';
 let profiles = [];
 let currentProfileId = null;
 
-// SVGs por defecto
 const DEFAULT_AVATARS = {
     portador: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-.85-5.05-2.2.03-1.66 3.33-2.57 5.05-2.57s5.02.91 5.05 2.57C15.8 19.15 14.03 20 12 20z'/></svg>",
     mama: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='%23db2777'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-.85-5.05-2.2.03-1.66 3.33-2.57 5.05-2.57s5.02.91 5.05 2.57C15.8 19.15 14.03 20 12 20z'/></svg>",
     papa: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='%232563eb'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-.85-5.05-2.2.03-1.66 3.33-2.57 5.05-2.57s5.02.91 5.05 2.57C15.8 19.15 14.03 20 12 20z'/></svg>"
 };
 
-// Perfil de demostración inicial
 const SAMPLE_PROFILE = {
     id: 'sample-01',
     pin: '1234',
+    tipo: 'persona',
     nombre: 'Mateo',
     apellido: 'González',
     edad: '7',
@@ -21,15 +25,14 @@ const SAMPLE_PROFILE = {
     fotoPortador: 'https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?w=300&auto=format&fit=crop&q=80',
     mamaNombre: 'Laura Pérez',
     mamaTel: '+5492604123456',
-    fotoMama: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
+    fotoMama: DEFAULT_AVATARS.mama,
     papaNombre: 'Carlos González',
     papaTel: '+5492604654321',
-    fotoPapa: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
+    fotoPapa: DEFAULT_AVATARS.papa,
     auxNombre: 'Roberto González (Abuelo)',
     auxTel: '+5492604555444'
 };
 
-// Función blindada para retirar el Splash Screen sin bloqueos
 function hideSplashScreen() {
     const splash = document.getElementById('splash-screen');
     if (splash && !splash.classList.contains('fade-out')) {
@@ -38,64 +41,137 @@ function hideSplashScreen() {
     }
 }
 
-// Inicialización segura con DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    loadFromStorage();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadFromSupabase();
     if (profiles.length === 0) {
         profiles.push(SAMPLE_PROFILE);
-        saveToStorage();
+        await saveToSupabase(SAMPLE_PROFILE);
     }
     
-    // Detectar si la página fue abierta escaneando un QR con parámetro ?id=
     const urlParams = new URLSearchParams(window.location.search);
     const sharedId = urlParams.get('id');
 
     if (sharedId) {
         const found = profiles.find(p => p.id === sharedId);
-        if (found) {
-            currentProfileId = found.id;
-        } else {
-            currentProfileId = profiles[0].id;
-        }
+        currentProfileId = found ? found.id : profiles[0].id;
+        const adminHeader = document.getElementById('admin-header');
+        if (adminHeader) adminHeader.style.display = 'none';
+        switchTab('preview');
     } else {
         currentProfileId = profiles[0].id;
+        switchTab('register');
     }
 
-    renderProfilesList();
     updateSelectOptions();
     renderEmergencyView(currentProfileId);
 
-    // Si viene de un escaneo QR de la cámara, ir directo al visor móvil
-    if (sharedId) {
-        switchTab('preview');
-    }
-
-    // Oculta el logo tras 1 segundo exacto
     setTimeout(hideSplashScreen, 1000);
 });
 
-// Respaldo de seguridad: fuerza el cierre a los 1.5s sí o sí
-setTimeout(hideSplashScreen, 1500);
-
-// Almacenamiento Local
-function loadFromStorage() {
+async function loadFromSupabase() {
     try {
+        const { data, error } = await supabaseClient.from('perfil').select('*');
+        if (error) throw error;
+        
+        profiles = (data || []).map(item => ({
+            id: item.id,
+            pin: item.pin,
+            tipo: item.tipo,
+            nombre: item.nombre,
+            apellido: item.apellido,
+            edad: item.edad,
+            discapacidad: item.discapacidad,
+            direccion: item.direccion,
+            fotoPortador: item.foto_portador || DEFAULT_AVATARS.portador,
+            mamaNombre: item.mama_nombre,
+            mamaTel: item.mama_tel,
+            fotoMama: item.foto_mama || DEFAULT_AVATARS.mama,
+            papaNombre: item.papa_nombre,
+            papaTel: item.papa_tel,
+            fotoPapa: item.foto_papa || DEFAULT_AVATARS.papa,
+            auxNombre: item.aux_nombre,
+            auxTel: item.aux_tel
+        }));
+    } catch (e) {
+        console.error("Error cargando de Supabase:", e);
         const stored = localStorage.getItem(STORAGE_KEY);
         profiles = stored ? JSON.parse(stored) : [];
-    } catch (e) {
-        profiles = [];
     }
 }
 
-function saveToStorage() {
+async function saveToSupabase(profileObj) {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+        const dbRecord = {
+            id: profileObj.id,
+            pin: profileObj.pin,
+            tipo: profileObj.tipo,
+            nombre: profileObj.nombre,
+            apellido: profileObj.apellido,
+            edad: profileObj.edad,
+            discapacidad: profileObj.discapacidad,
+            direccion: profileObj.direccion,
+            foto_portador: profileObj.fotoPortador,
+            mama_nombre: profileObj.mamaNombre,
+            mama_tel: profileObj.mamaTel,
+            foto_mama: profileObj.fotoMama,
+            papa_nombre: profileObj.papaNombre,
+            papa_tel: profileObj.papaTel,
+            foto_papa: profileObj.fotoPapa,
+            aux_nombre: profileObj.auxNombre,
+            aux_tel: profileObj.auxTel
+        };
+
+        const { error } = await supabaseClient.from('perfil').upsert(dbRecord);
+        if (error) throw error;
     } catch (e) {
-        alert("Atención: No se pudieron guardar los datos localmente.");
+        console.error("Error guardando en Supabase:", e);
+        alert("Atención: No se pudo guardar en la nube, se guardó localmente.");
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
     }
 }
 
-// Navegación por Pestañas
+async function uploadImageToSupabase(file, profileId) {
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${profileId}_${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from('fotos')
+            .upload(fileName, file, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabaseClient.storage.from('fotos').getPublicUrl(fileName);
+        return data.publicUrl;
+    } catch (e) {
+        console.error("Error subiendo imagen:", e);
+        alert("No se pudo subir la foto al servidor de nube.");
+        return null;
+    }
+}
+
+async function uploadImage(event, previewId, hiddenInputId) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert("Por favor selecciona una imagen menor a 5MB.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        document.getElementById(previewId).src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    const tempId = document.getElementById('field-persona-id').value || document.getElementById('field-mascota-id').value || 'temp_' + Date.now();
+    const publicUrl = await uploadImageToSupabase(file, tempId);
+    if (publicUrl) {
+        document.getElementById(hiddenInputId).value = publicUrl;
+    }
+}
+
 function switchTab(tabId) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
@@ -106,67 +182,141 @@ function switchTab(tabId) {
     if (section) section.classList.add('active');
     if (btn) btn.classList.add('active');
 
-    if (tabId === 'list') {
-        renderProfilesList();
+    if (tabId === 'qr') {
+        updateSelectOptions();
+        if (currentProfileId) {
+            const p = profiles.find(item => item.id === currentProfileId);
+            if (p) generateQR(p);
+        }
     } else if (tabId === 'preview') {
         updateSelectOptions();
         renderEmergencyView(currentProfileId);
     }
 }
 
-// Subida de imágenes locales
-function uploadImage(event, previewId, hiddenInputId) {
-    const file = event.target.files[0];
-    if (!file) return;
+function openForm(tipo, id = null) {
+    if (tipo === 'persona') {
+        document.getElementById('form-persona-element').reset();
+        document.getElementById('field-persona-id').value = '';
+        document.getElementById('preview-p-portador').src = '';
+        document.getElementById('data-portador-p').value = '';
+        document.getElementById('form-persona-title').textContent = '👤 Registrar Perfil de Persona';
+        
+        if (id) {
+            const p = profiles.find(item => item.id === id);
+            if (p) {
+                document.getElementById('field-persona-id').value = p.id;
+                document.getElementById('field-p-nombre').value = p.nombre;
+                document.getElementById('field-p-apellido').value = p.apellido;
+                document.getElementById('field-p-edad').value = p.edad;
+                document.getElementById('field-p-discapacidad').value = p.discapacidad;
+                document.getElementById('field-p-direccion').value = p.direccion;
+                document.getElementById('data-portador-p').value = p.fotoPortador;
+                document.getElementById('preview-p-portador').src = p.fotoPortador;
+                document.getElementById('field-p-mama-nombre').value = p.mamaNombre;
+                document.getElementById('field-p-mama-tel').value = p.mamaTel;
+                document.getElementById('field-p-papa-nombre').value = p.papaNombre || '';
+                document.getElementById('field-p-papa-tel').value = p.papaTel || '';
+                document.getElementById('field-p-aux-nombre').value = p.auxNombre || '';
+                document.getElementById('field-p-aux-tel').value = p.auxTel || '';
+                document.getElementById('field-p-pin').value = p.pin;
+                document.getElementById('form-persona-title').textContent = `✏️ Editar Perfil de ${p.nombre}`;
+            }
+        }
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-form-persona').classList.add('active');
+    } else if (tipo === 'mascota') {
+        document.getElementById('form-mascota-element').reset();
+        document.getElementById('field-mascota-id').value = '';
+        document.getElementById('preview-m-portador').src = '';
+        document.getElementById('data-portador-m').value = '';
+        document.getElementById('form-mascota-title').textContent = '🐾 Registrar QR para Mascota';
 
-    if (file.size > 3 * 1024 * 1024) {
-        alert("Por favor selecciona una imagen menor a 3MB.");
-        return;
+        if (id) {
+            const p = profiles.find(item => item.id === id);
+            if (p) {
+                document.getElementById('field-mascota-id').value = p.id;
+                document.getElementById('field-m-nombre').value = p.nombre;
+                let razaClean = p.apellido ? p.apellido.replace(/[()]/g, '') : '';
+                document.getElementById('field-m-raza').value = razaClean;
+                document.getElementById('field-m-edad').value = p.edad;
+                document.getElementById('field-m-cuidados').value = p.discapacidad;
+                document.getElementById('field-m-dir').value = p.direccion;
+                document.getElementById('field-m-dueno').value = p.mamaNombre;
+                document.getElementById('field-m-tel').value = p.mamaTel;
+                document.getElementById('data-portador-m').value = p.fotoPortador;
+                document.getElementById('preview-m-portador').src = p.fotoPortador;
+                document.getElementById('field-m-pin').value = p.pin;
+                document.getElementById('form-mascota-title').textContent = `✏️ Editar Mascota ${p.nombre}`;
+            }
+        }
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-form-mascota').classList.add('active');
     }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const result = e.target.result;
-        document.getElementById(previewId).src = result;
-        document.getElementById(hiddenInputId).value = result;
-    };
-    reader.readAsDataURL(file);
 }
 
-// Formulario: Guardar o Editar
-function handleFormSubmit(event) {
+async function handleFormSubmit(event, tipo) {
     event.preventDefault();
 
-    const id = document.getElementById('field-id').value || 'id_' + Date.now();
-    const pin = document.getElementById('field-pin').value.trim();
+    let id, pin, newProfile;
 
-    if (pin.length !== 4) {
-        alert("El PIN de seguridad debe tener exactamente 4 dígitos numéricos.");
-        return;
+    if (tipo === 'persona') {
+        id = document.getElementById('field-persona-id').value || 'id_' + Date.now();
+        pin = document.getElementById('field-p-pin').value.trim();
+
+        if (pin.length !== 4) {
+            alert("El PIN de seguridad debe tener exactamente 4 dígitos numéricos.");
+            return;
+        }
+
+        newProfile = {
+            id: id,
+            pin: pin,
+            tipo: 'persona',
+            nombre: document.getElementById('field-p-nombre').value.trim(),
+            apellido: document.getElementById('field-p-apellido').value.trim(),
+            edad: document.getElementById('field-p-edad').value.trim(),
+            discapacidad: document.getElementById('field-p-discapacidad').value.trim(),
+            direccion: document.getElementById('field-p-direccion').value.trim(),
+            fotoPortador: document.getElementById('data-portador-p').value || DEFAULT_AVATARS.portador,
+            mamaNombre: document.getElementById('field-p-mama-nombre').value.trim(),
+            mamaTel: document.getElementById('field-p-mama-tel').value.trim(),
+            fotoMama: DEFAULT_AVATARS.mama,
+            papaNombre: document.getElementById('field-p-papa-nombre').value.trim(),
+            papaTel: document.getElementById('field-p-papa-tel').value.trim(),
+            fotoPapa: DEFAULT_AVATARS.papa,
+            auxNombre: document.getElementById('field-p-aux-nombre').value.trim(),
+            auxTel: document.getElementById('field-p-aux-tel').value.trim()
+        };
+    } else {
+        id = document.getElementById('field-mascota-id').value || 'id_' + Date.now();
+        pin = document.getElementById('field-m-pin').value.trim();
+
+        if (pin.length !== 4) {
+            alert("El PIN de seguridad debe tener exactamente 4 dígitos numéricos.");
+            return;
+        }
+
+        newProfile = {
+            id: id,
+            pin: pin,
+            tipo: 'mascota',
+            nombre: document.getElementById('field-m-nombre').value.trim(),
+            apellido: `(${document.getElementById('field-m-raza').value.trim()})`,
+            edad: document.getElementById('field-m-edad').value.trim(),
+            discapacidad: document.getElementById('field-m-cuidados').value.trim(),
+            direccion: document.getElementById('field-m-dir').value.trim(),
+            fotoPortador: document.getElementById('data-portador-m').value || DEFAULT_AVATARS.portador,
+            mamaNombre: document.getElementById('field-m-dueno').value.trim(),
+            mamaTel: document.getElementById('field-m-tel').value.trim(),
+            fotoMama: DEFAULT_AVATARS.mama,
+            papaNombre: '',
+            papaTel: '',
+            fotoPapa: '',
+            auxNombre: '',
+            auxTel: ''
+        };
     }
-
-    const newProfile = {
-        id: id,
-        pin: pin,
-        nombre: document.getElementById('field-nombre').value.trim(),
-        apellido: document.getElementById('field-apellido').value.trim(),
-        edad: document.getElementById('field-edad').value.trim(),
-        discapacidad: document.getElementById('field-discapacidad').value.trim(),
-        direccion: document.getElementById('field-direccion').value.trim(),
-
-        fotoPortador: document.getElementById('data-portador').value || DEFAULT_AVATARS.portador,
-
-        mamaNombre: document.getElementById('field-mama-nombre').value.trim(),
-        mamaTel: document.getElementById('field-mama-tel').value.trim(),
-        fotoMama: document.getElementById('data-mama').value || DEFAULT_AVATARS.mama,
-
-        papaNombre: document.getElementById('field-papa-nombre').value.trim(),
-        papaTel: document.getElementById('field-papa-tel').value.trim(),
-        fotoPapa: document.getElementById('data-papa').value || DEFAULT_AVATARS.papa,
-
-        auxNombre: document.getElementById('field-aux-nombre').value.trim(),
-        auxTel: document.getElementById('field-aux-tel').value.trim()
-    };
 
     const index = profiles.findIndex(p => p.id === id);
     if (index >= 0) {
@@ -175,155 +325,37 @@ function handleFormSubmit(event) {
         profiles.push(newProfile);
     }
 
-    saveToStorage();
-    clearForm();
+    await saveToSupabase(newProfile);
     currentProfileId = id;
-    switchTab('preview');
-}
-
-function clearForm() {
-    document.getElementById('profile-form').reset();
-    document.getElementById('field-id').value = '';
-    document.getElementById('field-pin').value = '';
-    document.getElementById('data-portador').value = '';
-    document.getElementById('data-mama').value = '';
-    document.getElementById('data-papa').value = '';
-    document.getElementById('preview-portador').src = '';
-    document.getElementById('preview-mama').src = '';
-    document.getElementById('preview-papa').src = '';
-    document.getElementById('form-header-title').textContent = '✍️ Registrar Perfil de Usuario';
-}
-
-function requestPinAndEdit(id) {
-    const p = profiles.find(item => item.id === id);
-    if (!p) return;
-
-    const enteredPin = prompt(`Ingrese el PIN de 4 dígitos para editar el perfil de ${p.nombre}:`);
-    if (enteredPin === null) return;
-
-    if (enteredPin !== p.pin) {
-        alert("PIN incorrecto. Acceso denegado.");
-        return;
-    }
-
-    editProfile(id);
-}
-
-function requestPinAndDelete(id) {
-    const p = profiles.find(item => item.id === id);
-    if (!p) return;
-
-    const enteredPin = prompt(`Ingrese el PIN de 4 dígitos para ELIMINAR el perfil de ${p.nombre}:`);
-    if (enteredPin === null) return;
-
-    if (enteredPin !== p.pin) {
-        alert("PIN incorrecto. No se pudo eliminar el perfil.");
-        return;
-    }
-
-    if (confirm("¿Estás completamente seguro de eliminar este perfil de auxilio?")) {
-        profiles = profiles.filter(item => item.id !== id);
-        saveToStorage();
-        currentProfileId = profiles.length > 0 ? profiles[0].id : null;
-        renderProfilesList();
-    }
-}
-
-function editProfile(id) {
-    const p = profiles.find(item => item.id === id);
-    if (!p) return;
-
-    document.getElementById('field-id').value = p.id;
-    document.getElementById('field-pin').value = p.pin;
-    document.getElementById('field-nombre').value = p.nombre;
-    document.getElementById('field-apellido').value = p.apellido;
-    document.getElementById('field-edad').value = p.edad;
-    document.getElementById('field-discapacidad').value = p.discapacidad;
-    document.getElementById('field-direccion').value = p.direccion;
-
-    document.getElementById('data-portador').value = p.fotoPortador;
-    document.getElementById('preview-portador').src = p.fotoPortador;
-
-    document.getElementById('field-mama-nombre').value = p.mamaNombre;
-    document.getElementById('field-mama-tel').value = p.mamaTel;
-    document.getElementById('data-mama').value = p.fotoMama;
-    document.getElementById('preview-mama').src = p.fotoMama;
-
-    document.getElementById('field-papa-nombre').value = p.papaNombre;
-    document.getElementById('field-papa-tel').value = p.papaTel;
-    document.getElementById('data-papa').value = p.fotoPapa;
-    document.getElementById('preview-papa').src = p.fotoPapa;
-
-    document.getElementById('field-aux-nombre').value = p.auxNombre;
-    document.getElementById('field-aux-tel').value = p.auxTel;
-
-    document.getElementById('form-header-title').textContent = `✏️ Editar Perfil de ${p.nombre}`;
-    switchTab('register');
-}
-
-// Renderizado de Lista de Perfiles
-function renderProfilesList() {
-    const container = document.getElementById('profiles-container');
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (profiles.length === 0) {
-        container.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">
-                <p>No hay perfiles guardados.</p>
-                <button class="btn-action btn-primary" style="width: auto; margin: 1rem auto 0 auto;" onclick="switchTab('register')">Crear Primer Perfil</button>
-            </div>
-        `;
-        return;
-    }
-
-    profiles.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'profile-card';
-        card.innerHTML = `
-            <div class="profile-card-header">
-                <img src="${p.fotoPortador}" class="profile-card-avatar" onerror="this.src='${DEFAULT_AVATARS.portador}'">
-                <div>
-                    <h3 style="font-size: 1rem; font-weight: 800;">${p.nombre} ${p.apellido}</h3>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">${p.edad} años • ${p.discapacidad}</p>
-                </div>
-            </div>
-            <div class="profile-card-actions">
-                <button class="btn-sm btn-edit" style="flex:1;" onclick="viewProfile('${p.id}')">📱 Escanear / QR</button>
-                <button class="btn-sm btn-edit" onclick="requestPinAndEdit('${p.id}')">✏️ Editar</button>
-                <button class="btn-sm btn-delete" onclick="requestPinAndDelete('${p.id}')">🗑️</button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-function viewProfile(id) {
-    currentProfileId = id;
-    switchTab('preview');
+    switchTab('qr');
 }
 
 function updateSelectOptions() {
     const select = document.getElementById('select-active-profile');
-    if (!select) return;
-    select.innerHTML = '';
-    profiles.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = `${p.nombre} ${p.apellido} (${p.discapacidad})`;
-        select.appendChild(opt);
+    const selectQR = document.getElementById('select-qr-profile');
+    
+    [select, selectQR].forEach(sel => {
+        if (!sel) return;
+        sel.innerHTML = '';
+        profiles.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.nombre} ${p.apellido || ''} (${p.tipo === 'mascota' ? 'Mascota' : 'Persona'})`;
+            sel.appendChild(opt);
+        });
+        if (currentProfileId) {
+            sel.value = currentProfileId;
+        }
     });
-    if (currentProfileId) {
-        select.value = currentProfileId;
-    }
 }
 
 function changeActiveProfile(id) {
     currentProfileId = id;
     renderEmergencyView(id);
+    const p = profiles.find(item => item.id === id);
+    if (p) generateQR(p);
 }
 
-// RENDERIZADO DE LA VISTA DE EMERGENCIA PARA CELULAR
 function renderEmergencyView(id) {
     const p = profiles.find(item => item.id === id);
     const screen = document.getElementById('emergency-mobile-view');
@@ -335,26 +367,28 @@ function renderEmergencyView(id) {
         return;
     }
 
+    const isMascota = p.tipo === 'mascota';
+
     screen.innerHTML = `
         <div class="emergency-header">
-            <span class="emergency-badge">✚ PERFIL DE AUXILIO ID</span>
-            <h2>¡NECESITO AYUDA!</h2>
-            <p>Por favor contacta a mi familia de inmediato.</p>
+            <span class="emergency-badge">✚ ${isMascota ? 'AUXILIO MASCOTA PERDIDA' : 'PERFIL DE AUXILIO ID'}</span>
+            <h2>¡${isMascota ? 'ESTOY PERDIDO' : 'NECESITO AYUDA'}!</h2>
+            <p>${isMascota ? 'Por favor comunícate con mi familia.' : 'Por favor contacta a mi familia de inmediato.'}</p>
         </div>
 
         <div class="profile-hero">
             <div class="avatar-container">
                 <img src="${p.fotoPortador}" class="avatar-img" onerror="this.src='${DEFAULT_AVATARS.portador}'">
-                <span class="avatar-tag">ESTE SOY YO</span>
+                <span class="avatar-tag">${isMascota ? 'MI FOTO' : 'ESTE SOY YO'}</span>
             </div>
-            <h3 class="profile-name">${p.nombre} ${p.apellido}</h3>
-            <p class="profile-age">${p.edad} AÑOS</p>
+            <h3 class="profile-name">${p.nombre} ${p.apellido || ''}</h3>
+            <p class="profile-age">${p.edad || ''}</p>
         </div>
 
         <div class="disability-box">
             <div class="disability-icon">⚠️</div>
             <div>
-                <div class="disability-title">Condición / Diagnóstico:</div>
+                <div class="disability-title">${isMascota ? 'Cuidados / Observaciones:' : 'Condición / Diagnóstico:'}</div>
                 <div class="disability-desc">${p.discapacidad}</div>
             </div>
         </div>
@@ -362,19 +396,20 @@ function renderEmergencyView(id) {
         <div class="contacts-stack">
             <div class="contact-card mama-card">
                 <div class="contact-header">
-                    <img src="${p.fotoMama}" class="contact-avatar" onerror="this.src='${DEFAULT_AVATARS.mama}'">
+                    <img src="${p.fotoMama || DEFAULT_AVATARS.mama}" class="contact-avatar" onerror="this.src='${DEFAULT_AVATARS.mama}'">
                     <div class="contact-info">
-                        <span class="contact-role role-mama">MAMÁ</span>
+                        <span class="contact-role role-mama">${isMascota ? 'DUEÑO / RESPONSABLE' : 'MAMÁ'}</span>
                         <div class="contact-name">${p.mamaNombre}</div>
                         <div class="contact-phone">${p.mamaTel}</div>
                     </div>
                 </div>
-                <a href="tel:${p.mamaTel}" class="btn-call btn-mama">📞 LLAMAR A MAMÁ</a>
+                <a href="tel:${p.mamaTel}" class="btn-call btn-mama">📞 LLAMAR A ${isMascota ? 'RESPONSABLE' : 'MAMÁ'}</a>
             </div>
 
+            ${!isMascota && p.papaNombre ? `
             <div class="contact-card papa-card">
                 <div class="contact-header">
-                    <img src="${p.fotoPapa}" class="contact-avatar" onerror="this.src='${DEFAULT_AVATARS.papa}'">
+                    <img src="${p.fotoPapa || DEFAULT_AVATARS.papa}" class="contact-avatar" onerror="this.src='${DEFAULT_AVATARS.papa}'">
                     <div class="contact-info">
                         <span class="contact-role role-papa">PAPÁ</span>
                         <div class="contact-name">${p.papaNombre}</div>
@@ -382,8 +417,9 @@ function renderEmergencyView(id) {
                     </div>
                 </div>
                 <a href="tel:${p.papaTel}" class="btn-call btn-papa">📞 LLAMAR A PAPÁ</a>
-            </div>
+            </div>` : ''}
 
+            ${!isMascota && p.auxNombre ? `
             <div class="contact-card aux-card">
                 <div style="font-size: 0.65rem; font-weight: 800; color: #92400e; text-align: center; margin-bottom: 0.4rem; text-transform: uppercase;">
                     Contacto familiar secundario:
@@ -393,11 +429,11 @@ function renderEmergencyView(id) {
                     <div class="contact-phone" style="font-weight: 700; color: #78350f;">${p.auxTel}</div>
                 </div>
                 <a href="tel:${p.auxTel}" class="btn-call btn-aux">📲 LLAMAR A CONTACTO DE AUXILIO</a>
-            </div>
+            </div>` : ''}
         </div>
 
         <div class="address-box">
-            <label>🏠 Dirección de Residencia</label>
+            <label>🏠 ${isMascota ? 'Domicilio / Dirección del Responsable' : 'Dirección de Residencia'}</label>
             <p>${p.direccion}</p>
         </div>
 
@@ -412,50 +448,45 @@ function renderEmergencyView(id) {
                 <a href="tel:107" class="btn-call" style="background-color: #16a34a; padding: 0.5rem; font-size: 0.75rem;">
                     AMBULANCIA (107)
                 </a>
-                <a href="tel:100" class="btn-call" style="background-color: #ea580c; padding: 0.5rem; font-size: 0.75rem; grid-column: span 2;">
-                    🚒 BOMBEROS (100)
-                </a>
             </div>
         </div>
     `;
-
-    generateQR(p);
 }
 
-// Generar Código QR codificando la URL web pública del perfil
 function generateQR(profile) {
     const qrCanvas = document.getElementById('qrcode-canvas');
     const printQr = document.getElementById('print-qr');
 
-    if (!qrCanvas || !printQr) return;
+    if (!qrCanvas) return;
 
     qrCanvas.innerHTML = '';
-    printQr.innerHTML = '';
+    if (printQr) printQr.innerHTML = '';
 
-    // Generar enlace público dinámico hacia la app con el parámetro id
     const baseUrl = window.location.origin + window.location.pathname;
     const qrPayload = `${baseUrl}?id=${profile.id}`;
 
     new QRCode(qrCanvas, {
         text: qrPayload,
-        width: 150,
-        height: 150,
+        width: 180,
+        height: 180,
         colorDark: "#0f172a",
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
     });
 
-    new QRCode(printQr, {
-        text: qrPayload,
-        width: 200,
-        height: 200,
-        colorDark: "#0f172a",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
+    if (printQr) {
+        new QRCode(printQr, {
+            text: qrPayload,
+            width: 200,
+            height: 200,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
 
     const printName = document.getElementById('print-name');
     const printCond = document.getElementById('print-condition');
-    if (printName) printName.textContent = `Brazalete de Auxilio: ${profile.nombre} ${profile.apellido}`;
+    if (printName) printName.textContent = `Brazalete de Auxilio: ${profile.nombre} ${profile.apellido || ''}`;
     if (printCond) printCond.textContent = `Condición: ${profile.discapacidad}`;
 }
